@@ -1,23 +1,27 @@
 package priorityqueue
+
 import (
 	"container/heap"
-	"exotel/exobeanstalkd/types"
 	"errors"
+	"exotel/exobeanstalkd/types"
 )
-type container []*types.Job
+
+type container struct {
+	itemHeap []*types.Job
+	//lookupIndex   map[interface{}](*types.Job)
+	//lookupIndex map ID->index
+	lookupIndex map[int]int
+}
+
 // PriorityQueue represents the queue
 type PriorityQueue struct {
 	jobHeap *container
-	//lookup   map[interface{}](*types.Job)
-	//lookup map ID->index
-	lookup map[int]int
 }
 
 // New initializes an empty priority queue.
 func New() PriorityQueue {
 	return PriorityQueue{
-		jobHeap: &container{},
-		lookup:   make(map[int]int),
+		jobHeap: &container{lookupIndex: make(map[int]int)},
 	}
 }
 
@@ -26,33 +30,43 @@ func (p *PriorityQueue) Len() int {
 	return p.jobHeap.Len()
 }
 
-// Insert inserts a new element into the queue. No action is performed on duplicate elements.
-func (p *PriorityQueue) Insert(jb *types.Job) {
-	_, ok := p.lookup[jb.ID]
+// Push inserts a new element into the queue. No action is performed on duplicate elements.
+func (p *PriorityQueue) Push(jb *types.Job) {
+	_, ok := p.jobHeap.lookupIndex[jb.ID]
 	if ok {
 		return
 	}
 
 	heap.Push(p.jobHeap, jb)
-	p.lookup[jb.ID] = jb.Index
+	//p.lookupIndex[jb.ID] = jb.Index //Don't need it bcuz Push will take care of this
 }
 
 // Pop removes the element with the highest priority from the queue and returns it.
 // In case of an empty queue, an error is returned.
 func (p *PriorityQueue) Pop() (*types.Job, error) {
-	if len(*p.jobHeap) == 0 {
+	if p.Len() == 0 {
 		return nil, errors.New("empty queue")
 	}
 
 	job := heap.Pop(p.jobHeap).(*types.Job)
-	delete(p.lookup, job.ID)
+	delete(p.jobHeap.lookupIndex, job.ID)
 	return job, nil
+}
+
+//Remove deletes job from queue with job id ID
+func (p *PriorityQueue) Remove(ID int) bool {
+	indx, ok := p.jobHeap.lookupIndex[ID]
+	if !ok {
+		return false
+	}
+	_ = heap.Remove(p.jobHeap, indx).(*types.Job)
+	return true
 }
 
 // UpdatePriority changes the priority of a given item.
 // If the specified item is not present in the queue, no action is performed.
 /*func (p *PriorityQueue) UpdatePriority(x interface{}, newPriority float64) {
-	item, ok := p.lookup[x]
+	item, ok := p.lookupIndex[x]
 	if !ok {
 		return
 	}
@@ -62,31 +76,31 @@ func (p *PriorityQueue) Pop() (*types.Job, error) {
 }*/
 
 func (c *container) Len() int {
-	return len(*c)
+	return len((*c).itemHeap)
 }
 
 func (c *container) Less(i, j int) bool {
-	return (*c)[i].ID < (*c)[j].ID
+	return (*c).itemHeap[i].ID < (*c).itemHeap[j].ID
 }
 
 func (c *container) Swap(i, j int) {
-	(*c)[i], (*c)[j] = (*c)[j], (*c)[i]
-	(*c)[i].index = i
-	(*c)[j].index = j
+	(*c).itemHeap[i], (*c).itemHeap[j] = (*c).itemHeap[j], (*c).itemHeap[i]
+	(*c).itemHeap[i].Index = i
+	(*c).itemHeap[j].Index = j
+	(*c).lookupIndex[(*c).itemHeap[i].ID] = i
+	(*c).lookupIndex[(*c).itemHeap[j].ID] = j
 }
 
 func (c *container) Push(x interface{}) {
-	it := x.(*item)
-	it.index = len(*ih)
-	*ih = append(*ih, it)
+	jb := x.(*types.Job)
+	jb.Index = c.Len()
+	(*c).itemHeap = append((*c).itemHeap, jb)
+	(*c).lookupIndex[jb.ID] = jb.Index
 }
 
 func (c *container) Pop() interface{} {
-	old := *ih
-	item := old[len(old)-1]
-	*ih = old[0 : len(old)-1]
-	return item
+	old := (*c).itemHeap
+	job := old[len(old)-1]
+	(*c).itemHeap = old[0 : len(old)-1]
+	return job
 }
-
-import "container/heap"
-import "exotel/exobeanstalkd/types"
