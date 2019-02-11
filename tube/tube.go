@@ -67,8 +67,17 @@ func (tb *Tube) Pop() (*types.Job, error) {
 	}
 
 	job := heap.Pop(tb.jobHeap).(*types.Job)
-	delete(tb.jobHeap.lookupIndex, job.ID)
+	//delete(tb.jobHeap.lookupIndex, job.ID)
 	return job, nil
+}
+
+//Top returns priority of next ready job
+func (tb *Tube) Top() (int, error) {
+	if tb.Len() == 0 {
+		return -1, errors.New("empty tube")
+	}
+	priority := tb.jobHeap.itemHeap[0].Priority
+	return priority, nil
 }
 
 //Delete deletes job from tube with job id ID
@@ -79,6 +88,7 @@ func (tb *Tube) Delete(ID int) (*types.Job, error) {
 		return nil, errors.New(err)
 	}
 	job := heap.Remove(tb.jobHeap, indx).(*types.Job)
+	//delete(tb.jobHeap.lookupIndex, job.ID)
 	return job, nil
 }
 
@@ -99,15 +109,16 @@ func (c *container) Swap(i, j int) {
 }
 
 func (c *container) Push(x interface{}) {
-	jb := x.(*types.Job)
-	jb.Index = c.Len()
-	(*c).itemHeap = append((*c).itemHeap, jb)
-	(*c).lookupIndex[jb.ID] = jb.Index
+	job := x.(*types.Job)
+	job.Index = c.Len()
+	(*c).itemHeap = append((*c).itemHeap, job)
+	(*c).lookupIndex[job.ID] = job.Index
 }
 
 func (c *container) Pop() interface{} {
 	old := (*c).itemHeap
 	job := old[len(old)-1]
 	(*c).itemHeap = old[0 : len(old)-1]
+	delete((*c).lookupIndex, job.ID)
 	return job
 }

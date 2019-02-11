@@ -16,6 +16,6 @@ type Job struct {
 	ID       int
 	Priority int
 	TTR      int
-	Data     []*byte
+	Data     []byte
 	Index    int
 }
