@@ -8,7 +8,7 @@ package main
 
 import (
 	"bufio"
-	bs "exotel/exobeanstalkd/beanstalkd"
+	exq "exotel/exobeanstalkd/exoqueue"
 	"fmt"
 	"os"
 	"strconv"
@@ -23,16 +23,17 @@ import (
 //func (q *Queue) Delete(jobID int) (int, error) {
 
 func main() {
-	q := bs.New()
+	q := exq.New()
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		reader.Reset(os.Stdin)
 		cmd, _ := reader.ReadString('\n')
 		cmdList := strings.Fields(cmd)
 		n := len(cmdList)
-		if n > 0 {
-			cmdList[0] = strings.ToLower(cmdList[0])
+		if n <= 0 {
+			continue
 		}
+		cmdList[0] = strings.ToLower(cmdList[0])
 		switch cmdList[0] {
 		case "reserve":
 			if n == 1 {
@@ -55,10 +56,22 @@ func main() {
 		case "put":
 			if n == 4 {
 				priority, err := strconv.Atoi(cmdList[1])
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
 				ttr, err := strconv.Atoi(cmdList[2])
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
 				count, err := strconv.Atoi(cmdList[3])
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
 				data := make([]byte, 0)
-				for i := 0; i < count && err != nil; i++ {
+				for i := 0; i < count; i++ {
 					b, _ := reader.ReadByte()
 					data = append(data, b)
 				}

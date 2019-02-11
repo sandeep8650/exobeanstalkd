@@ -4,7 +4,7 @@
  **********************
  */
 
-package beanstalkd
+package exoqueue
 
 import (
 	"errors"
@@ -51,6 +51,7 @@ func New() Queue {
 		jobIDtoTubeID:    make(map[int]int),
 		tubeNameToTubeID: map1,
 		nextJobID:        -1,
+		reserveTube:      make(map[int]foo),
 	}
 }
 
