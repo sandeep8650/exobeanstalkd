@@ -24,6 +24,9 @@ import (
 
 func main() {
 	q := exq.New()
+	jobIDChan := make(chan int)
+	dataChan := make(chan []byte)
+	errChan := make(chan error)
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		reader.Reset(os.Stdin)
@@ -37,7 +40,11 @@ func main() {
 		switch cmdList[0] {
 		case "reserve":
 			if n == 1 {
-				jobID, data, err := q.Reserve()
+				go q.Reserve(jobIDChan, dataChan, errChan)
+				jobID := <-jobIDChan
+				data := <-dataChan
+				err := <-errChan
+
 				if err != nil {
 					fmt.Println(err)
 				} else {
