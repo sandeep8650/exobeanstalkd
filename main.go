@@ -8,7 +8,7 @@ package main
 
 import (
 	"bufio"
-	exq "exotel/exobeanstalkd/exoqueue"
+	exq "exotel.in/exobeanstalkd/exoqueue"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,16 +17,13 @@ import (
 
 //func New() Queue {
 //func (q *Queue) Use(tbName string) string {
-//func (q *Queue) Put(priority int, ttr int, count int, data []byte) int {
+//func (q *Queue) Put(priority int, ttr int, count int, data []byte) (int, error) {
 //func (q *Queue) Watch(tbName string) (int, error) {
 //func (q *Queue) Reserve() (int, string, error) {
 //func (q *Queue) Delete(jobID int) (int, error) {
 
 func main() {
 	q := exq.New()
-	jobIDChan := make(chan int)
-	dataChan := make(chan []byte)
-	errChan := make(chan error)
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		reader.Reset(os.Stdin)
@@ -40,10 +37,7 @@ func main() {
 		switch cmdList[0] {
 		case "reserve":
 			if n == 1 {
-				go q.Reserve(jobIDChan, dataChan, errChan)
-				jobID := <-jobIDChan
-				data := <-dataChan
-				err := <-errChan
+				jobID, data, err := q.Reserve()
 
 				if err != nil {
 					fmt.Println(err)
@@ -82,8 +76,13 @@ func main() {
 					b, _ := reader.ReadByte()
 					data = append(data, b)
 				}
-				jobID := q.Put(priority, ttr, count, data)
-				fmt.Printf("INSERTED %d\n", jobID)
+				jobID, err := q.Put(priority, ttr, count, data)
+				if err != nil {
+					fmt.Println(err)
+					fmt.Println("BAD FORMAT")
+				} else {
+					fmt.Printf("INSERTED %d\n", jobID)
+				}
 			} else {
 				fmt.Println("BAD FORMAT")
 			}

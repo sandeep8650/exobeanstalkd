@@ -9,7 +9,7 @@ package tube
 import (
 	"container/heap"
 	"errors"
-	"exotel/exobeanstalkd/types"
+	"exotel.in/exobeanstalkd/types"
 	"fmt"
 )
 
@@ -74,7 +74,7 @@ func (tb *Tube) Pop() (*types.Job, error) {
 //Top returns priority of next ready job
 func (tb *Tube) Top() (int, error) {
 	if tb.Len() == 0 {
-		return -1, errors.New("empty tube")
+		return 0, errors.New("empty tube")
 	}
 	priority := tb.jobHeap.itemHeap[0].Priority
 	return priority, nil

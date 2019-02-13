@@ -8,8 +8,8 @@ package exoqueue
 
 import (
 	"errors"
-	"exotel/exobeanstalkd/tube"
-	"exotel/exobeanstalkd/types"
+	"exotel.in/exobeanstalkd/tube"
+	"exotel.in/exobeanstalkd/types"
 	"fmt"
 	"sync"
 	"time"
@@ -79,9 +79,14 @@ func (q *Queue) getNextJobID() int {
 }
 
 //Put inserts the job in queue and returns id of inserted job
-func (q *Queue) Put(priority int, ttr int, count int, data []byte) int {
+func (q *Queue) Put(priority int, ttr int, count int, data []byte) (int, error) {
 	if ttr <= 0 {
 		ttr = 1
+	}
+	if priority < 0 {
+		return -1, errors.New("Priority must be a positive value")
+	} else if priority >= 1<<32 {
+		priority = 1<<32 - 1
 	}
 	job := types.Job{
 		ID:       q.getNextJobID(),
@@ -91,7 +96,7 @@ func (q *Queue) Put(priority int, ttr int, count int, data []byte) int {
 	}
 	q.jobIDtoTubeID[job.ID] = q.currentTube
 	(q.tubes[q.currentTube]).Push(&job)
-	return job.ID
+	return job.ID, nil
 }
 
 //Watch put the tube in watch list
@@ -116,8 +121,18 @@ func (q *Queue) push(tubeID int, job *types.Job) {
 }
 
 //Reserve reserves the job from watch list
-// and returns (chan jobID,chan data,chan error)
-func (q *Queue) Reserve(jobID chan int, data chan []byte, err chan error) { //(chan int, chan []byte,chan error) {
+// and returns (jobID,data,error)
+func (q *Queue) Reserve() (jobID int, data []byte, err error) {
+	jobIDChan := make(chan int)
+	dataChan := make(chan []byte)
+	errChan := make(chan error)
+
+	go q.reserve(jobIDChan, dataChan, errChan)
+
+	return <-jobIDChan, <-dataChan, <-errChan
+}
+
+func (q *Queue) reserve(jobIDChan chan int, dataChan chan []byte, errChan chan error) {
 	readyTubeID := -1
 	highPriority := 1 << 32
 	var priority int
@@ -134,9 +149,9 @@ func (q *Queue) Reserve(jobID chan int, data chan []byte, err chan error) { //(c
 	q.mux.Unlock()
 
 	if readyTubeID == -1 {
-		jobID <- 0
-		data <- []byte{}
-		err <- errors.New("No job in watchlist")
+		jobIDChan <- 0
+		dataChan <- []byte{}
+		errChan <- errors.New("No job in watchlist")
 		return
 		//return 0, []byte{}, errors.New("No job in watchlist")
 	}
@@ -147,9 +162,9 @@ func (q *Queue) Reserve(jobID chan int, data chan []byte, err chan error) { //(c
 	delete(q.jobIDtoTubeID, job.ID)
 	q.mux.Unlock()
 
-	jobID <- job.ID
-	data <- job.Data
-	err <- nil
+	jobIDChan <- job.ID
+	dataChan <- job.Data
+	errChan <- nil
 
 	//sleep for TTR seconds
 	time.Sleep(time.Duration(job.TTR) * time.Second)
