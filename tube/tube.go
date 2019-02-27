@@ -71,13 +71,14 @@ func (tb *Tube) Pop() (*types.Job, error) {
 	return job, nil
 }
 
-//Top returns priority of next ready job
-func (tb *Tube) Top() (int, error) {
+//Top returns id and priority of next ready job
+func (tb *Tube) Top() (int, int, error) {
 	if tb.Len() == 0 {
-		return 0, errors.New("empty tube")
+		return 0, 0, errors.New("empty tube")
 	}
 	priority := tb.jobHeap.itemHeap[0].Priority
-	return priority, nil
+	jobID := tb.jobHeap.itemHeap[0].ID
+	return jobID, priority, nil
 }
 
 //Delete deletes job from tube with job id ID

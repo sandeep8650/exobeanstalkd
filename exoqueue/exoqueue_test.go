@@ -8,7 +8,6 @@ package exoqueue
 
 import (
 	//"errors"
-	"strconv"
 	"testing"
 )
 
@@ -50,9 +49,9 @@ func TestFIFOSingleTube(t *testing.T) {
 
 func BenchmarkPut(b *testing.B) {
 	q := New()
-	data := make([]byte)
+	data := make([]byte, 7)
 	for i := 0; i < b.N; i++ {
-		id, err := q.Put(0, 5, 7, data)
+		_, err := q.Put(0, 5, 7, data)
 		if err != nil {
 			b.Error(err)
 		}

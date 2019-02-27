@@ -135,15 +135,25 @@ func (q *Queue) Reserve() (jobID int, data []byte, err error) {
 func (q *Queue) reserve(jobIDChan chan int, dataChan chan []byte, errChan chan error) {
 	readyTubeID := -1
 	highPriority := 1 << 32
-	var priority int
-	var ok error
+	topJobID := -1
+	//var priority int
+	//var ok error
 
 	q.mux.Lock()
 	for tbID := range q.watchList {
-		priority, ok = (q.tubes[tbID]).Top()
-		if (ok == nil) && (highPriority > priority) {
-			highPriority = priority
-			readyTubeID = tbID
+		jobID, priority, ok := (q.tubes[tbID]).Top()
+		if ok == nil {
+			if highPriority > priority {
+				highPriority = priority
+				topJobID = jobID
+				readyTubeID = tbID
+			} else if highPriority == priority {
+				if topJobID > jobID {
+					highPriority = priority
+					topJobID = jobID
+					readyTubeID = tbID
+				}
+			}
 		}
 	}
 	q.mux.Unlock()
